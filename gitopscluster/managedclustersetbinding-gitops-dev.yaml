@@ -1,0 +1,9 @@
+# Binds the "dev" ManagedClusterSet into the openshift-gitops namespace so its
+# clusters are selectable by a Placement living there (required for GitOpsCluster).
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: dev
+  namespace: openshift-gitops
+spec:
+  clusterSet: dev
