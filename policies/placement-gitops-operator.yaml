@@ -1,0 +1,12 @@
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: placement-gitops-operator-dev
+  namespace: dev-apps
+spec:
+  clusterSets:
+    - dev
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions: []
