@@ -1,0 +1,17 @@
+# Selects every cluster in every environment clusterset. This is only used to
+# register Argo CD cluster secrets on the hub -- WHICH apps go to WHICH clusters
+# is still decided per-environment by the ApplicationSets in the dev/prod branches.
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: placement-all-clusters
+  namespace: openshift-gitops
+spec:
+  clusterSets:
+    - dev
+    - prod
+    # - staging   # add one line per new environment, nothing else changes here
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions: []
