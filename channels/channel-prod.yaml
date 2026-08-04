@@ -1,8 +1,0 @@
-apiVersion: apps.open-cluster-management.io/v1
-kind: Channel
-metadata:
-  name: gitops-operator-channel-prod
-  namespace: prod-apps
-spec:
-  type: Git
-  pathname: https://github.com/<your-org>/acm-openshift-gitops-install.git
