@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-workloads-prod
+  namespace: openshift-gitops
+spec:
+  generators:
+    - matrix:
+        generators:
+          - git:
+              repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+              revision: prod
+              directories:
+                - path: apps/*
+          - clusterDecisionResource:
+              configMapRef: ocm-placement-generator
+              labelSelector:
+                matchLabels:
+                  cluster.open-cluster-management.io/placement: placement-apps-prod
+              requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: '{{path.basename}}-{{name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+        targetRevision: prod
+        path: '{{path}}'
+      destination:
+        server: '{{server}}'
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: false     # prod: require manual sync approval in the Argo CD UI/CLI
+          selfHeal: false
+        syncOptions:
+          - CreateNamespace=true
