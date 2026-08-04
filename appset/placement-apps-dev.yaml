@@ -1,0 +1,14 @@
+# Target selection for the ApplicationSet's clusterDecisionResource generator.
+# Separate from the operator-install Placement so app targeting can diverge later.
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: placement-apps-dev
+  namespace: openshift-gitops
+spec:
+  clusterSets:
+    - dev
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions: []

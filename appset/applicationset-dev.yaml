@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-workloads-dev
+  namespace: openshift-gitops
+spec:
+  generators:
+    - matrix:
+        generators:
+          # 1) one entry per app folder under apps/ on this branch
+          - git:
+              repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+              revision: dev
+              directories:
+                - path: apps/*
+          # 2) one entry per cluster in the "dev" ManagedClusterSet, exposing
+          #    the built-in {{name}} and {{server}} vars -- no hub templating needed
+          - clusterDecisionResource:
+              configMapRef: ocm-placement-generator
+              labelSelector:
+                matchLabels:
+                  cluster.open-cluster-management.io/placement: placement-apps-dev
+              requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: '{{path.basename}}-{{name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+        targetRevision: dev
+        path: '{{path}}'
+      destination:
+        server: '{{server}}'
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

@@ -1,0 +1,8 @@
+# A second, independent "app" -- just to demonstrate multiple reusable Argo CD
+# apps riding on the same ApplicationSet/matrix generator.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-banner
+data:
+  message: "managed by ACM push model"
