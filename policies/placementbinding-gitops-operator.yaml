@@ -1,0 +1,13 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: binding-gitops-operator-prod
+  namespace: prod-apps
+placementRef:
+  name: placement-gitops-operator-prod
+  kind: Placement
+  apiGroup: cluster.open-cluster-management.io
+subjects:
+  - name: policy-gitops-operator-prod
+    kind: Policy
+    apiGroup: policy.open-cluster-management.io
