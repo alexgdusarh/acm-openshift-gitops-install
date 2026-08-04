@@ -116,3 +116,68 @@ it never needs GitOps on the spokes, so there's no circular dependency.
 git remote add origin https://github.com/<your-org>/acm-openshift-gitops-install.git
 git push -u origin main dev prod
 ```
+
+## Layer 2: pushing multiple Argo CD apps to every cluster in an environment
+
+On top of the operator install (Layer 1, Policy-based), each branch now also carries
+an **ApplicationSet push model** setup for deploying ordinary workloads:
+
+```
+main
+└── gitopscluster/
+    ├── managedclustersetbinding-gitops-dev.yaml
+    ├── managedclustersetbinding-gitops-prod.yaml
+    ├── placement-all-clusters.yaml   # every cluster, all environments
+    └── gitopscluster.yaml            # registers them as Argo CD cluster secrets (push)
+
+dev / prod (same shape in both)
+├── apps/
+│   ├── hello-world/                  # reusable app #1 (kustomize)
+│   └── cluster-banner/               # reusable app #2 (kustomize)
+└── appset/
+    ├── placement-apps-<env>.yaml     # which clusters this env's apps go to
+    └── applicationset-<env>.yaml     # matrix: apps/* x clusters -> N x M Applications
+```
+
+**Why push, and why this scales to "several Argo CD apps":** the `ApplicationSet`
+uses a **matrix generator** — one axis is a `git` generator that auto-discovers every
+folder under `apps/`, the other is a `clusterDecisionResource` generator that reads
+the Placement's decisions. Add a new app = add a folder. Add a new cluster to the
+`dev`/`prod` `ManagedClusterSet` = it automatically gets every existing app, no new
+YAML. Both axes are native ACM/Argo CD variables:
+
+```
+name:   '{{name}}'     # the managed cluster's name
+server: '{{server}}'   # the managed cluster's live API server URL
+```
+
+These come for free from the `clusterDecisionResource` generator — no hub templating
+required for this layer (that's specifically a Policy feature, used in Layer 1).
+
+`dev`'s ApplicationSet auto-syncs (`prune: true`, `selfHeal: true`); `prod`'s is
+`automated: {}`-free so a human approves each sync from the Argo CD UI/CLI — same
+promote-via-PR workflow as Layer 1, applied to the app layer too.
+
+**Prerequisites for push specifically:**
+- OpenShift GitOps operator installed on the **hub** itself (Layer 1's Policy only
+  installs it on the *managed* clusters — the hub needs its own instance to run the
+  Argo CD server that does the pushing).
+- The `ManagedServiceAccount` add-on enabled, so the token used to push to each
+  managed cluster rotates automatically.
+- By default the hub's Argo CD application-controller service account needs
+  cluster-admin on each managed cluster to apply arbitrary resources. If you don't
+  want that, see "Creating a customized service account for Argo CD push model" in
+  the RHACM GitOps docs — it lets you scope a `ManagedServiceAccount` +
+  `ClusterPermission` to exactly the namespaces/verbs each app needs instead.
+
+## Adding a third environment (e.g. staging)
+
+1. `main`: add `ManagedClusterSet staging`, its `ManagedClusterSetBinding`s (dev-apps
+   style + the `openshift-gitops` one), and add `- staging` to
+   `gitopscluster/placement-all-clusters.yaml`.
+2. Branch `dev` (or `prod`) into `staging`, adjust `policies/policy-gitops-operator.yaml`
+   and `appset/placement-apps-staging.yaml` / `appset/applicationset-staging.yaml`
+   `clusterSets:`/`revision:` to `staging`.
+3. Label the clusters: `cluster.open-cluster-management.io/clusterset=staging`.
+
+No changes needed anywhere else — `apps/` is reused as-is.
