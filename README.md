@@ -223,3 +223,25 @@ promote-via-PR workflow as Layer 1, applied to the app layer too.
 3. Label the clusters: `cluster.open-cluster-management.io/clusterset=staging`.
 
 No changes needed anywhere else — `apps/` is reused as-is.
+
+## Troubleshooting: `ocm-placement-generator` ConfigMap
+
+Both `ApplicationSet`s reference `configMapRef: ocm-placement-generator`. This is a
+**fixed name defined by ACM itself** (identical across every RHACM version's own
+docs, 2.8 through 2.15) — it's the generator-plugin registration object that
+`multicloud-integrations` auto-creates in the `openshift-gitops` namespace once
+`gitopscluster/gitopscluster.yaml` reconciles. It is not authored anywhere in this
+repo on purpose; different `ApplicationSet`s share that one name and are
+distinguished by `labelSelector` matching a specific `Placement`.
+
+If an `ApplicationSet` isn't generating `Application`s:
+
+```bash
+oc get configmap ocm-placement-generator -n openshift-gitops
+oc get gitopscluster -n openshift-gitops gitops-cluster-all-environments -o yaml
+oc get placementdecisions -n openshift-gitops
+oc logs -n openshift-gitops deploy/multicluster-integrations   # or the actual pod name in your build
+```
+
+If the ConfigMap is missing, the `GitOpsCluster` hasn't reconciled yet — check its
+`status` for errors before looking anywhere else.
