@@ -1,0 +1,14 @@
+# The Argo CD ApplicationSet controller needs to list/watch PlacementDecisions
+# to resolve the clusterDecisionResource generator. Without this, you'll see
+# "cannot list resource placementdecisions" in the applicationset-controller logs
+# and no Applications will be generated even though ocm-placement-generator and
+# GitOpsCluster both look healthy.
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: openshift-gitops-placementdecision-reader
+rules:
+  - verbs: [get, list, watch]
+    apiGroups: [cluster.open-cluster-management.io]
+    resources:
+      - placementdecisions

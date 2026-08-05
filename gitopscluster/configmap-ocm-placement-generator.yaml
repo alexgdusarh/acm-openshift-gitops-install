@@ -1,0 +1,17 @@
+# Required by ApplicationSet's clusterDecisionResource generator (used in
+# appset/applicationset-{dev,prod}.yaml on the dev/prod branches). This is NOT
+# auto-created by ACM -- it's a "duck-typing" config the admin creates once per
+# Argo CD instance, telling the generator how to read an OCM PlacementDecision:
+# which GVK it is, and which status field holds the list of decided clusters.
+# All ApplicationSets in this Argo CD instance share this same ConfigMap; only
+# the labelSelector in each ApplicationSet differs (picks a specific Placement).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocm-placement-generator
+  namespace: openshift-gitops
+data:
+  apiVersion: cluster.open-cluster-management.io/v1beta1
+  kind: PlacementDecision
+  statusListKey: decisions
+  matchKey: clusterName
