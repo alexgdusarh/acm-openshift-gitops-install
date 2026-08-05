@@ -9,7 +9,7 @@ spec:
         generators:
           # 1) one entry per app folder under apps/ on this branch
           - git:
-              repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+              repoURL: https://github.com/alexgdusarh/acm-openshift-gitops-install.git
               revision: dev
               directories:
                 - path: apps/*
@@ -34,7 +34,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+        repoURL: https://github.com/alexgdusarh/acm-openshift-gitops-install.git
         targetRevision: dev
         path: '{{path}}'
       destination:

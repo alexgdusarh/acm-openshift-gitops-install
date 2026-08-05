@@ -155,7 +155,7 @@ Argo CD → `Policy` → managed cluster.
 ## Pushing to GitHub
 
 ```bash
-git remote add origin https://github.com/<your-org>/acm-openshift-gitops-install.git
+git remote add origin https://github.com/alexgdusarh/acm-openshift-gitops-install.git
 git push -u origin main dev prod
 ```
 
