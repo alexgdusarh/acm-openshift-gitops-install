@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: policies-gitops-operator-prod
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+    targetRevision: prod
+    path: policies
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    # prod: no automated{} block -- someone must run `argocd app sync` (or click
+    # Sync in the console) after reviewing the diff. Same posture as the
+    # remediationAction: inform on the generated Policy itself.
+    syncOptions:
+      - CreateNamespace=true

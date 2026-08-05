@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: policies-gitops-operator-dev
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+    targetRevision: dev
+    path: policies
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

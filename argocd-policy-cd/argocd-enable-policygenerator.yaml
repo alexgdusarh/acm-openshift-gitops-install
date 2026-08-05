@@ -1,0 +1,27 @@
+# NOT a new object -- this is the patch to merge into your existing hub `argocd`
+# CR (namespace openshift-gitops) so its embedded Kustomize can run the
+# PolicyGenerator plugin. Apply with:
+#   oc patch argocd openshift-gitops -n openshift-gitops --type merge --patch-file argocd-enable-policygenerator.yaml
+# Replace <version> with your RHACM version (matches the multiclusterhub version).
+spec:
+  kustomizeBuildOptions: --enable-alpha-plugins
+  repo:
+    env:
+      - name: KUSTOMIZE_PLUGIN_HOME
+        value: /etc/kustomize/plugin
+    initContainers:
+      - name: policy-generator-install
+        image: registry.redhat.io/rhacm2/multicluster-operators-subscription-rhel9:v<version>
+        command: [/bin/bash]
+        args:
+          - -c
+          - cp /policy-generator/PolicyGenerator-not-fips-compliant /policy-generator-tmp/PolicyGenerator
+        volumeMounts:
+          - name: policy-generator
+            mountPath: /policy-generator-tmp
+    volumeMounts:
+      - name: policy-generator
+        mountPath: /etc/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator
+    volumes:
+      - name: policy-generator
+        emptyDir: {}
