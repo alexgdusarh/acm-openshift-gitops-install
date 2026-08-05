@@ -2,7 +2,11 @@
 # CR (namespace openshift-gitops) so its embedded Kustomize can run the
 # PolicyGenerator plugin. Apply with:
 #   oc patch argocd openshift-gitops -n openshift-gitops --type merge --patch-file argocd-enable-policygenerator.yaml
-# Replace <version> with your RHACM version (matches the multiclusterhub version).
+#
+# UPGRADE CHECKLIST: whenever RHACM is upgraded on the hub, bump the image tag
+# below (search: RHACM_VERSION) to match the new RHACM/multiclusterhub version,
+# then re-apply this patch. Mismatched versions can ship a PolicyGenerator binary
+# that doesn't understand newer PolicyGenerator fields.
 spec:
   kustomizeBuildOptions: --enable-alpha-plugins
   repo:
@@ -11,7 +15,8 @@ spec:
         value: /etc/kustomize/plugin
     initContainers:
       - name: policy-generator-install
-        image: registry.redhat.io/rhacm2/multicluster-operators-subscription-rhel9:v<version>
+        # RHACM_VERSION -- update this tag on every RHACM upgrade
+        image: registry.redhat.io/rhacm2/multicluster-operators-subscription-rhel9:v2.15
         command: [/bin/bash]
         args:
           - -c
