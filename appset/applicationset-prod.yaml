@@ -8,7 +8,7 @@ spec:
     - matrix:
         generators:
           - git:
-              repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+              repoURL: https://github.com/alexgdusarh/acm-openshift-gitops-install.git
               revision: prod
               directories:
                 - path: apps/*
@@ -30,7 +30,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/<your-org>/acm-openshift-gitops-install.git
+        repoURL: https://github.com/alexgdusarh/acm-openshift-gitops-install.git
         targetRevision: prod
         path: '{{path}}'
       destination:
