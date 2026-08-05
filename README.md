@@ -60,36 +60,53 @@ Promote a change dev → prod the normal way: open a PR from `dev` into `prod`.
 
 ## One-time setup on the hub
 
+These are true day-0 bootstrap steps — the hub's own namespaces, RBAC and Argo CD
+config have to exist before Git-driven delivery of anything else can start.
+**Prerequisite:** OpenShift GitOps is already installed on the hub itself (Layer 1's
+Policy only installs it on the *managed* clusters).
+
 1. Apply the shared, environment-agnostic resources from `main`:
 
    ```bash
    git checkout main
    oc apply -f namespaces/
    oc apply -f clustersets/
+   oc apply -f gitopscluster/
    ```
 
-2. Apply each environment's policy bundle straight from its branch:
+2. Grant the hub's Argo CD permission to manage Policies/Placements, and enable the
+   `PolicyGenerator` Kustomize plugin on it (edit the image tag in the file to match
+   your RHACM version first):
 
    ```bash
-   git checkout dev
-   oc apply -k policies/
-
-   git checkout prod
-   oc apply -k policies/
+   oc apply -f argocd-policy-cd/clusterrole-policy-admin.yaml
+   oc apply -f argocd-policy-cd/clusterrolebinding-policy-admin.yaml
+   oc patch argocd openshift-gitops -n openshift-gitops --type merge \
+     --patch-file argocd-policy-cd/argocd-enable-policygenerator.yaml
    ```
 
-   (In practice you'd point an ACM `PolicyGenerator`/Argo CD Application at each
-   branch so this reconciles continuously instead of a one-time `oc apply` — see
-   "Continuous delivery of the policies themselves" below.)
+3. Point Argo CD at each branch's `policies/` directory. From here on, the Policy
+   that installs the operator is delivered **continuously** from Git — a merge to
+   `dev`/`prod` is all it takes, no more manual `oc apply -k policies/`:
 
-3. Put each managed cluster into the right set — the only per-cluster step:
+   ```bash
+   oc apply -f argocd-policy-cd/application-policies-dev.yaml
+   oc apply -f argocd-policy-cd/application-policies-prod.yaml
+   ```
+
+   `dev`'s Application auto-syncs (`prune: true`, `selfHeal: true`); `prod`'s has no
+   `automated:` block, so someone runs `argocd app sync policies-gitops-operator-prod`
+   (or clicks Sync in the console) after reviewing the diff — mirrors the
+   `remediationAction: inform` already set on the generated prod Policy itself.
+
+4. Put each managed cluster into the right set — the only per-cluster step:
 
    ```bash
    oc label managedcluster <dev-cluster-name>  cluster.open-cluster-management.io/clusterset=dev  --overwrite
    oc label managedcluster <prod-cluster-name> cluster.open-cluster-management.io/clusterset=prod --overwrite
    ```
 
-4. Watch compliance:
+5. Watch compliance:
 
    ```bash
    oc get policy -n dev-apps  policy-gitops-operator-dev  -o jsonpath='{.status.compliant}'
@@ -104,11 +121,36 @@ Promote a change dev → prod the normal way: open a PR from `dev` into `prod`.
 
 ## Continuous delivery of the policies themselves
 
-To make this actually GitOps-driven rather than a one-time `oc apply`, wrap
-`policies/` in each branch with a `PolicyGenerator` and point an OpenShift GitOps
-`Application` (running on the hub) at that branch. That Application only ever
-touches the hub (creating `Policy`/`Placement`/`PlacementBinding` objects there) —
-it never needs GitOps on the spokes, so there's no circular dependency.
+`policies/` in each branch is now driven by a `PolicyGenerator` (`policy-generator-config.yaml`
++ raw manifests under `manifests/`) instead of a hand-written `Policy`. The
+`Application`s in `argocd-policy-cd/` (living on `main`, since they're hub-scoped)
+point Argo CD at that Kustomize output per branch:
+
+```
+main
+└── argocd-policy-cd/
+    ├── clusterrole-policy-admin.yaml
+    ├── clusterrolebinding-policy-admin.yaml
+    ├── argocd-enable-policygenerator.yaml   # patch for the existing hub `argocd` CR
+    ├── application-policies-dev.yaml        # watches dev  branch's policies/
+    └── application-policies-prod.yaml       # watches prod branch's policies/
+
+dev / prod
+└── policies/
+    ├── manifests/
+    │   ├── namespace.yaml
+    │   ├── operatorgroup.yaml
+    │   ├── subscription.yaml
+    │   └── configmap-cluster-info.yaml      # the hub-templated ConfigMap
+    ├── placement-gitops-operator.yaml       # reused via placementPath, not regenerated
+    ├── policy-generator-config.yaml
+    └── kustomization.yaml
+```
+
+This Application only ever touches the hub (creating `Policy`/`Placement`/
+`PlacementBinding` objects there) — it never needs GitOps running on the spokes, so
+there's still no circular dependency, just one more link in the chain: Git → hub
+Argo CD → `Policy` → managed cluster.
 
 ## Pushing to GitHub
 
