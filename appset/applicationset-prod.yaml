@@ -12,6 +12,12 @@ spec:
               revision: prod
               directories:
                 - path: apps/*
+          # configMapRef "ocm-placement-generator" is NOT something this repo
+          # creates -- it's a fixed name that ACM's multicloud-integrations
+          # controller auto-creates in this namespace once gitopscluster.yaml
+          # (see main branch: gitopscluster/gitopscluster.yaml) reconciles.
+          # Verify it exists with:
+          #   oc get configmap ocm-placement-generator -n openshift-gitops
           - clusterDecisionResource:
               configMapRef: ocm-placement-generator
               labelSelector:
