@@ -1,0 +1,30 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: gitops-operator-dev
+placementBindingDefaults:
+  name: binding-gitops-operator-dev
+policyDefaults:
+  namespace: dev-apps
+  # Reuse the Placement already defined in this branch instead of generating a
+  # new one -- keeps a single source of truth for "which clusters is dev".
+  placement:
+    placementPath: placement-gitops-operator.yaml
+  remediationAction: enforce   # dev: auto-apply
+  severity: high
+  # Namespace -> OperatorGroup -> Subscription must land in that order.
+  orderManifests: true
+  consolidateManifests: false
+  standards:
+    - NIST-CSF
+  categories:
+    - PR.IP Information Protection Processes and Procedures
+  controls:
+    - PR.IP-1 Baseline Configuration
+policies:
+  - name: policy-gitops-operator-dev
+    manifests:
+      - path: manifests/namespace.yaml
+      - path: manifests/operatorgroup.yaml
+      - path: manifests/subscription.yaml
+      - path: manifests/configmap-cluster-info.yaml
