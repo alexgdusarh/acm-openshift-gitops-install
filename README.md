@@ -224,24 +224,35 @@ promote-via-PR workflow as Layer 1, applied to the app layer too.
 
 No changes needed anywhere else — `apps/` is reused as-is.
 
-## Troubleshooting: `ocm-placement-generator` ConfigMap
+## `ocm-placement-generator` ConfigMap
 
-Both `ApplicationSet`s reference `configMapRef: ocm-placement-generator`. This is a
-**fixed name defined by ACM itself** (identical across every RHACM version's own
-docs, 2.8 through 2.15) — it's the generator-plugin registration object that
-`multicloud-integrations` auto-creates in the `openshift-gitops` namespace once
-`gitopscluster/gitopscluster.yaml` reconciles. It is not authored anywhere in this
-repo on purpose; different `ApplicationSet`s share that one name and are
-distinguished by `labelSelector` matching a specific `Placement`.
+Both `ApplicationSet`s reference `configMapRef: ocm-placement-generator`. This is
+**not** auto-created by ACM/`GitOpsCluster` — `GitOpsCluster` only registers cluster
+secrets; it has nothing to do with the `ApplicationSet` controller. The ConfigMap
+is Argo CD's own "duck-typing" config for the `clusterDecisionResource` generator:
+it tells the generator which GVK to read (`PlacementDecision`) and which status
+field holds the resolved cluster list. You create it once per Argo CD instance —
+`gitopscluster/configmap-ocm-placement-generator.yaml` on `main` does that — and
+every `ApplicationSet` in that instance reuses the same name, distinguished only by
+`labelSelector` picking a specific `Placement`.
 
-If an `ApplicationSet` isn't generating `Application`s:
+It also needs RBAC: the `openshift-gitops-applicationset-controller` service
+account has to be able to `list`/`watch` `PlacementDecisions`, which
+`gitopscluster/clusterrole-placementdecision-reader.yaml` +
+`clusterrolebinding-placementdecision-reader.yaml` grant. Without that RBAC you'll
+see `cannot list resource "placementdecisions"` in the controller logs even with
+the ConfigMap in place and `GitOpsCluster` reporting healthy.
+
+Apply both, from `main`:
+
+```bash
+oc apply -f gitopscluster/
+```
+
+If an `ApplicationSet` still isn't generating `Application`s, check in this order:
 
 ```bash
 oc get configmap ocm-placement-generator -n openshift-gitops
-oc get gitopscluster -n openshift-gitops gitops-cluster-all-environments -o yaml
 oc get placementdecisions -n openshift-gitops
-oc logs -n openshift-gitops deploy/multicluster-integrations   # or the actual pod name in your build
+oc logs -n openshift-gitops deploy/openshift-gitops-applicationset-controller | grep -i "placementdecision\|clusterdecision"
 ```
-
-If the ConfigMap is missing, the `GitOpsCluster` hasn't reconciled yet — check its
-`status` for errors before looking anywhere else.
